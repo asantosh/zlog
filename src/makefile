@@ -2,7 +2,7 @@
 # Copyright (C) 2010-2012 Hardy Simpson <HardySimpson1984@gmail.com>
 # This file is released under the LGPL 2.1 license, see the COPYING file
 
-OBJ=    \
+OBJS=    \
   buf.o    \
   category.o    \
   category_table.o    \
@@ -33,9 +33,11 @@ ZLOG_MINOR=2
 CC:=$(shell sh -c 'type $(CC) >/dev/null 2>/dev/null && echo $(CC) || echo gcc')
 OPTIMIZATION?=-O2
 WARNINGS=-Wall -Werror -Wstrict-prototypes -fwrapv
-DEBUG?= -g -ggdb
-REAL_CFLAGS=$(OPTIMIZATION) -fPIC -pthread $(CFLAGS) $(WARNINGS) $(DEBUG)
+INC_PATH=include
+includes = $(wildcard $(INC_PATH)/*.h)
+REAL_CFLAGS=$(OPTIMIZATION) -fPIC $(CFLAGS) $(WARNINGS) $(DEBUG) -I$(INC_PATH)
 REAL_LDFLAGS=$(LDFLAGS) -pthread
+DEBUG_FLAGS = -g -ggdb
 
 DYLIBSUFFIX=so
 STLIBSUFFIX=a
@@ -76,65 +78,19 @@ ifeq ($(uname_S),AIX)
 endif
 
 all: $(DYLIBNAME) $(BINS)
+debug : CFLAGS += $(DEBUG_FLAGS)
+debug : all
 
-# Deps (use make dep to generate this)
-buf.o: buf.c zc_defs.h zc_profile.h zc_arraylist.h zc_hashtable.h \
- zc_xplatform.h zc_util.h buf.h
-category.o: category.c fmacros.h category.h zc_defs.h zc_profile.h \
- zc_arraylist.h zc_hashtable.h zc_xplatform.h zc_util.h thread.h event.h \
- buf.h mdc.h rule.h format.h rotater.h record.h
-category_table.o: category_table.c zc_defs.h zc_profile.h zc_arraylist.h \
- zc_hashtable.h zc_xplatform.h zc_util.h category_table.h category.h \
- thread.h event.h buf.h mdc.h
-conf.o: conf.c fmacros.h conf.h zc_defs.h zc_profile.h zc_arraylist.h \
- zc_hashtable.h zc_xplatform.h zc_util.h format.h thread.h event.h buf.h \
- mdc.h rotater.h rule.h record.h level_list.h level.h
-event.o: event.c fmacros.h zc_defs.h zc_profile.h zc_arraylist.h \
- zc_hashtable.h zc_xplatform.h zc_util.h event.h
-format.o: format.c zc_defs.h zc_profile.h zc_arraylist.h zc_hashtable.h \
- zc_xplatform.h zc_util.h thread.h event.h buf.h mdc.h spec.h format.h
-level.o: level.c zc_defs.h zc_profile.h zc_arraylist.h zc_hashtable.h \
- zc_xplatform.h zc_util.h level.h
-level_list.o: level_list.c zc_defs.h zc_profile.h zc_arraylist.h \
- zc_hashtable.h zc_xplatform.h zc_util.h level.h level_list.h
-mdc.o: mdc.c mdc.h zc_defs.h zc_profile.h zc_arraylist.h zc_hashtable.h \
- zc_xplatform.h zc_util.h
-record.o: record.c zc_defs.h zc_profile.h zc_arraylist.h zc_hashtable.h \
- zc_xplatform.h zc_util.h record.h
-record_table.o: record_table.c zc_defs.h zc_profile.h zc_arraylist.h \
- zc_hashtable.h zc_xplatform.h zc_util.h record_table.h record.h
-rotater.o: rotater.c zc_defs.h zc_profile.h zc_arraylist.h zc_hashtable.h \
- zc_xplatform.h zc_util.h rotater.h
-rule.o: rule.c fmacros.h rule.h zc_defs.h zc_profile.h zc_arraylist.h \
- zc_hashtable.h zc_xplatform.h zc_util.h format.h thread.h event.h buf.h \
- mdc.h rotater.h record.h level_list.h level.h spec.h
-spec.o: spec.c fmacros.h spec.h event.h zc_defs.h zc_profile.h \
- zc_arraylist.h zc_hashtable.h zc_xplatform.h zc_util.h buf.h thread.h \
- mdc.h level_list.h level.h
-thread.o: thread.c zc_defs.h zc_profile.h zc_arraylist.h zc_hashtable.h \
- zc_xplatform.h zc_util.h event.h buf.h thread.h mdc.h
-zc_arraylist.o: zc_arraylist.c zc_defs.h zc_profile.h zc_arraylist.h \
- zc_hashtable.h zc_xplatform.h zc_util.h
-zc_hashtable.o: zc_hashtable.c zc_defs.h zc_profile.h zc_arraylist.h \
- zc_hashtable.h zc_xplatform.h zc_util.h
-zc_profile.o: zc_profile.c fmacros.h zc_profile.h zc_xplatform.h
-zc_util.o: zc_util.c zc_defs.h zc_profile.h zc_arraylist.h zc_hashtable.h \
- zc_xplatform.h zc_util.h
-zlog-chk-conf.o: zlog-chk-conf.c fmacros.h zlog.h
-zlog.o: zlog.c fmacros.h conf.h zc_defs.h zc_profile.h zc_arraylist.h \
- zc_hashtable.h zc_xplatform.h zc_util.h format.h thread.h event.h buf.h \
- mdc.h rotater.h category_table.h category.h record_table.h \
- record.h rule.h
 
-$(DYLIBNAME): $(OBJ)
-	$(DYLIB_MAKE_CMD) $(OBJ) $(REAL_LDFLAGS)
+$(DYLIBNAME): $(OBJS)
+	$(DYLIB_MAKE_CMD) $(OBJS) $(REAL_LDFLAGS)
 	# for use in test folder - linux and requirement for aix runtime
 	# resolving
 	cp -f $(DYLIBNAME) $(DYLIB_MAJOR_NAME)
 	cp -f $(DYLIBNAME) $(DYLIB_MINOR_NAME)
 
-$(STLIBNAME): $(OBJ)
-	$(STLIB_MAKE_CMD) $(OBJ)
+$(STLIBNAME): $(OBJS)
+	$(STLIB_MAKE_CMD) $(OBJS)
 
 dynamic: $(DYLIBNAME)
 static: $(STLIBNAME)
@@ -143,11 +99,12 @@ static: $(STLIBNAME)
 zlog-chk-conf: zlog-chk-conf.o $(STLIBNAME) $(DYLIBNAME)
 	$(CC) -o $@ zlog-chk-conf.o -L. -lzlog $(REAL_LDFLAGS)
 
-.c.o:
+%.o : %.c $(includes)
 	$(CC) -std=c99 -pedantic -c $(REAL_CFLAGS) $<
 
 clean:
-	rm -rf $(DYLIBNAME) $(STLIBNAME) $(BINS) *.o *.gcda *.gcno *.gcov $(DYLIB_MINOR_NAME)
+	rm -rf $(DYLIBNAME) $(STLIBNAME) $(BINS) *.o *.gcda *.gcno *.gcov \
+	$(DYLIB_MINOR_NAME) $(DYLIB_MAJOR_NAME)
 
 dep:
 	$(CC) -MM *.c
